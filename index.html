@@ -1,9 +1,10 @@
-<!-- save as index.html and open in your browser -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<!-- Disable zooming & force fit to screen -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
 <title>Wingo Predict — HTML Tool</title>
 <style>
   :root{
@@ -18,16 +19,26 @@
     --violet:#9b6bff;
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   }
-  html,body{height:100%}
-  body{
+  html,body {
+    height:100%;
     margin:0;
     background: linear-gradient(180deg, #031018 0%, #071a24 60%);
     color:#e6f1f6;
     -webkit-font-smoothing:antialiased;
+
+    /* Restrict copy & swipe */
+    user-select:none;
+    -webkit-user-select:none;
+    -ms-user-select:none;
+    -moz-user-select:none;
+    touch-action:manipulation;
+    overflow-x:hidden;
+  }
+  body {
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:28px;
+    padding:14px;
   }
 
   .app {
@@ -37,6 +48,15 @@
     grid-template-columns: 1fr 420px;
     gap:20px;
     align-items:start;
+  }
+
+  /* Responsive mobile */
+  @media (max-width:920px){
+    .app {
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+    .side {order:2}
   }
 
   .card {
@@ -95,11 +115,7 @@
     gap:6px;
   }
 
-  .big-number{
-    font-size:42px;
-    font-weight:800;
-    letter-spacing:1px;
-  }
+  .big-number{font-size:42px;font-weight:800;letter-spacing:1px}
   .muted{color:var(--muted);font-size:13px}
   .value{font-weight:700}
 
@@ -118,46 +134,17 @@
     transition:width 800ms ease;
   }
 
-  /* right column */
-  .side {
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-
-  .matrix {
-    height:220px;
-    border-radius:10px;
-    overflow:hidden;
-    background:linear-gradient(180deg,#021012,#03161a);
-    position:relative;
-  }
+  .side {display:flex;flex-direction:column;gap:12px}
+  .matrix {height:220px;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#021012,#03161a);position:relative}
   .matrix canvas{width:100%;height:100%;display:block}
 
-  .log{
-    font-family:monospace;
-    font-size:13px;
-    padding:10px;
-    border-radius:8px;
-    background:rgba(0,0,0,0.25);
-    max-height:220px;
-    overflow:auto;
-    color:#cfeef0;
-  }
+  .log{font-family:monospace;font-size:13px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.25);max-height:220px;overflow:auto;color:#cfeef0}
 
   .history-list{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow:auto;padding-right:6px}
-  .hist-item{
-    background:rgba(255,255,255,0.02);
-    border-radius:8px;padding:10px;font-size:13px;display:flex;justify-content:space-between;align-items:center;
-  }
+  .hist-item{background:rgba(255,255,255,0.02);border-radius:8px;padding:10px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
   .k{color:var(--muted);font-size:12px}
 
   footer{margin-top:12px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
-
-  @media (max-width:920px){
-    .app{grid-template-columns:1fr; padding:8px}
-    .side{order:2}
-  }
 </style>
 </head>
 <body>
@@ -165,13 +152,13 @@
     <div class="card">
       <header>
         <h1>Wingo Predict — HTML Tool</h1>
-        <p>Enter a period number (or its last digits) — this tool uses deterministic math + seeded PRNG to produce a prediction card similar to the termux scripts you provided.</p>
+        <p>Enter a period number (last digits allowed) to generate prediction.</p>
       </header>
 
       <div class="controls">
-        <input id="periodInput" type="text" inputmode="numeric" placeholder="Enter period number (e.g. 123456)" value="">
-        <select id="digitsSelect" title="Use last N digits">
-          <option value="0">Use full number</option>
+        <input id="periodInput" type="text" inputmode="numeric" placeholder="Enter period number" />
+        <select id="digitsSelect">
+          <option value="0">Use full</option>
           <option value="1">Last 1 digit</option>
           <option value="2">Last 2 digits</option>
           <option value="3" selected>Last 3 digits</option>
@@ -179,36 +166,34 @@
         </select>
         <button id="predictBtn">Predict</button>
         <button class="small" id="patternBtn">Get Pattern</button>
-        <label style="display:flex;gap:8px;align-items:center;margin-left:auto">
+        <label style="margin-left:auto;display:flex;align-items:center;gap:6px">
           <input id="voiceToggle" type="checkbox" /> Voice
         </label>
       </div>
 
       <div class="progress"><i id="progressFill"></i></div>
 
-      <div class="result-grid" style="margin-top:14px">
-        <div class="result-card" id="colorCard">
+      <div class="result-grid">
+        <div class="result-card">
           <div class="muted">Color</div>
           <div class="big-number" id="colorValue">—</div>
           <div class="k" id="colorSeedInfo"></div>
         </div>
-
-        <div class="result-card" id="numberCard">
+        <div class="result-card">
           <div class="muted">Number / Size</div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between">
             <div>
               <div class="big-number" id="numberValue">—</div>
               <div class="k" id="sizeValue">—</div>
             </div>
             <div style="text-align:right">
               <div class="muted">Accuracy</div>
-              <div style="font-weight:800;font-size:18px" id="accuracyValue">—</div>
+              <div id="accuracyValue" style="font-weight:800;font-size:18px">—</div>
             </div>
           </div>
         </div>
-
         <div class="result-card" style="grid-column:span 2">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;justify-content:space-between">
             <div>
               <div class="muted">Winning Probability</div>
               <div class="value" id="probValue">—</div>
@@ -222,275 +207,50 @@
       </div>
 
       <footer>
-        <div>Inspired by scripts: Colour, Russ2, 999okwin.</div>
+        <div>Logs & History</div>
         <div><button id="downloadLog" class="small">Download Log</button></div>
       </footer>
     </div>
 
     <div class="card side">
-      <div class="matrix card" id="matrixWrap">
-        <canvas id="matrixCanvas"></canvas>
-      </div>
-
-      <div class="card log" id="logBox" aria-live="polite">
-        <strong>Activity log</strong>
-        <div id="logLines" style="margin-top:8px"></div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <div class="matrix card"><canvas id="matrixCanvas"></canvas></div>
+      <div class="card log"><strong>Activity log</strong><div id="logLines" style="margin-top:8px"></div></div>
+      <div style="display:flex;gap:8px;justify-content:space-between">
         <div style="width:68%">
           <div class="muted">History</div>
-          <div class="history-list" id="historyList"></div>
+          <div id="historyList" class="history-list"></div>
         </div>
         <div style="width:30%;display:flex;flex-direction:column;gap:8px">
           <button id="clearHistory" class="small">Clear</button>
-          <button id="seededToggle" class="small">Toggle Seeded</button>
+          <button id="seededToggle" class="small">Seeded: ON</button>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-/*
-  Tool logic:
-  - Deterministic base math: number = period % 10, color = period % 3 (0->RED,1->GREEN,2->VIOLET)
-  - Probability derived from (period * 371) % 1000 then %100 -- small adjustment if <65 (from Colour.txt). :contentReference[oaicite:4]{index=4}
-  - Accuracy & animations inspired by 999okwin scripts and Russ2 UI behavior. :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
-  - Seeded PRNG option for reproducible "accuracy" (mulberry32).
-*/
+document.addEventListener('contextmenu', e => e.preventDefault()); // disable copy menu
+const $=id=>document.getElementById(id);
+let history=[],seeded=true;
 
-const $ = id => document.getElementById(id);
+function log(m){let d=document.createElement('div');d.textContent=(new Date()).toLocaleTimeString()+" — "+m;$("logLines").prepend(d);}
+function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function seededRandomInt(seed,min,max){const rng=mulberry32(seed);return Math.floor(rng()*(max-min+1))+min;}
+function predictFromPeriod(raw,opt={}){let {useLastDigits=0,seedMode=true}=opt;if(!raw)return null;let s=raw.toString().replace(/\D/g,'');if(!s)return null;if(useLastDigits>0&&s.length>useLastDigits)s=s.slice(-useLastDigits);let n=parseInt(s,10);let cMap=['RED','GREEN','VIOLET'];let color=cMap[n%3];let num=n%10;let size=(num===0?'GREEN':num>=5?'BIG':'SMALL');let magic=(n*371)%1000;let prob=magic%100;if(prob<65)prob=Math.min(100,prob+35);let seed=n^(magic<<3);let acc=seedMode?seededRandomInt(seed,90,99):(Math.floor(Math.random()*11)+85);let pat=(n%2===0?'B':'S')+((seededRandomInt(seed+7,0,9)%2===0)?'X':'');return{input:s,periodNum:n,color,number:num,size,prob,accuracy:acc,pattern:pat,seed};}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function renderHistory(){const c=$("historyList");c.innerHTML='';for(let i=0;i<history.length&&i<50;i++){let r=history[i];let e=document.createElement('div');e.className='hist-item';e.innerHTML=`<div><strong>${r.color} ${r.number}</strong><div class="k">prob ${r.prob}% • acc ${r.accuracy}%</div></div><div class="k">${r.input}</div>`;c.appendChild(e);}}
+function speakPhrase(t){if(!('speechSynthesis'in window))return;let s=new SpeechSynthesisUtterance(t);s.lang='en-US';window.speechSynthesis.cancel();window.speechSynthesis.speak(s);}
+function generatePattern(){let rng=mulberry32(Date.now()&0xffffffff),out=[];for(let i=0;i<12;i++)out.push(rng()>0.5?'B':'S');return out.join('');}
 
-let history = [];
-let seeded = true;
+$("predictBtn").onclick=async()=>{let raw=$("periodInput").value;let d=parseInt($("digitsSelect").value,10)||0;let res=predictFromPeriod(raw,{useLastDigits:d,seedMode:seeded});if(!res){log("Invalid input");return;}$("progressFill").style.width="4%";await sleep(200);$("progressFill").style.width="62%";await sleep(300);$("progressFill").style.width="100%";await sleep(200);
+$("colorValue").textContent=res.color;$("colorSeedInfo").textContent="seed:"+res.seed;$("numberValue").textContent=res.number;$("sizeValue").textContent=res.size;$("probValue").textContent=res.prob+"%";$("accuracyValue").textContent=res.accuracy+"%";$("patternValue").textContent=res.pattern;history.unshift(res);renderHistory();log(`Predicted: ${res.color} ${res.number} (${res.size}) prob:${res.prob}% acc:${res.accuracy}%`);if($("voiceToggle").checked)speakPhrase("lga do lga do lga do. "+res.color+" "+res.number);}
+$("patternBtn").onclick=()=>{$("patternValue").textContent=generatePattern();log("Pattern generated")};
+$("downloadLog").onclick=()=>{let lines=[...$("logLines").children].map(n=>n.textContent);let blob=new Blob([lines.join("\\n")],{type:"text/plain"});let url=URL.createObjectURL(blob);let a=document.createElement("a");a.href=url;a.download="wingo_log.txt";a.click();URL.revokeObjectURL(url);}
+$("clearHistory").onclick=()=>{history=[];renderHistory();log("History cleared")}
+$("seededToggle").onclick=()=>{seeded=!seeded;$("seededToggle").textContent="Seeded: "+(seeded?"ON":"OFF");}
 
-function log(msg){
-  const ln = document.createElement('div');
-  ln.textContent = `${(new Date()).toLocaleTimeString()} — ${msg}`;
-  $('logLines').prepend(ln);
-  // keep log size
-  const lines = $('logLines').children;
-  while(lines.length > 200) lines[lines.length-1].remove();
-}
-
-// simple seeded PRNG (mulberry32)
-function mulberry32(a) {
-  return function() {
-    var t = a += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-}
-
-function seededRandomInt(seed, min=0, max=100){
-  const rng = mulberry32(seed);
-  return Math.floor(rng() * (max - min + 1)) + min;
-}
-
-// core deterministic prediction function
-function predictFromPeriod(rawPeriod, options = {}){
-  options = Object.assign({useLastDigits:0, seedMode:true}, options);
-  if(!rawPeriod || rawPeriod.toString().trim()==="") return null;
-  let periodStr = rawPeriod.toString().replace(/\D/g,'');
-  if(periodStr.length === 0) return null;
-  if(options.useLastDigits > 0 && periodStr.length > options.useLastDigits){
-    periodStr = periodStr.slice(-options.useLastDigits);
-  }
-  const periodNum = parseInt(periodStr,10);
-  // color mapping
-  const colorIndex = periodNum % 3;
-  const colorMap = ['RED','GREEN','VIOLET'];
-  const color = colorMap[colorIndex];
-
-  // number and size
-  const number = periodNum % 10;
-  const size = (number === 0) ? 'GREEN' : (number >= 5 ? 'BIG' : 'SMALL');
-
-  // probability: (period * 371) % 1000 -> %100 then adjust if <65
-  let magic = ( (periodNum * 371) % 1000 );
-  let prob = magic % 100;
-  if(prob < 65) prob = Math.min(100, prob + 35);
-
-  // accuracy derived via seeded PRNG for reproducible feel
-  const seed = periodNum ^ (magic << 3);
-  let accuracy = seededRandomInt(seed, 90, 99); // 90-99 like the scripts
-  // if not seeded mode use Math.random
-  if(!options.seedMode) accuracy = Math.floor(Math.random()*11) + 85; // 85-95
-
-  // pattern: small deterministic "B/S" pattern based on parity plus seeded extra
-  const pattern = ((periodNum % 2) === 0) ? 'B' : 'S';
-  const patternExtra = (seededRandomInt(seed+7,0,9) % 2 === 0) ? 'X' : '';
-
-  return {
-    input: periodStr,
-    periodNum,
-    color, colorIndex,
-    number, size,
-    prob, accuracy,
-    magic, pattern: pattern + patternExtra,
-    seed
-  };
-}
-
-// UI wiring
-$('predictBtn').addEventListener('click', async ()=>{
-  const raw = $('periodInput').value;
-  const digits = parseInt($('digitsSelect').value,10);
-  const useLast = isNaN(digits) ? 0 : digits;
-  const voice = $('voiceToggle').checked;
-  const seededMode = seeded;
-
-  // animate progress
-  $('progressFill').style.width = '4%';
-  log('Starting prediction...');
-  await sleep(200);
-  $('progressFill').style.width = '36%';
-  await sleep(300);
-  $('progressFill').style.width = '62%';
-
-  const res = predictFromPeriod(raw, {useLastDigits:useLast, seedMode:seededMode});
-  if(!res){
-    log('Invalid period input');
-    $('progressFill').style.width = '0%';
-    return;
-  }
-
-  // finish animation
-  $('progressFill').style.width = '100%';
-  await sleep(220);
-
-  // show results
-  $('colorValue').textContent = res.color;
-  $('colorSeedInfo').textContent = `seed: ${res.seed}`;
-  $('numberValue').textContent = res.number;
-  $('sizeValue').textContent = res.size;
-  $('probValue').textContent = `${res.prob}%`;
-  $('accuracyValue').textContent = `${res.accuracy}%`;
-  $('patternValue').textContent = res.pattern;
-
-  // push to history
-  history.unshift(res);
-  renderHistory();
-
-  log(`Predicted: ${res.color} ${res.number} (${res.size}) — prob ${res.prob}% — acc ${res.accuracy}%`);
-  if(voice){
-    speakPhrase(`lga do lga do lga do. ${res.color} ${res.number}`);
-  }
-});
-
-// "Get Pattern" button — generates a pattern string every click (pseudo-random deterministic based on time)
-$('patternBtn').addEventListener('click', ()=>{
-  const p = generatePattern();
-  $('patternValue').textContent = p;
-  log(`Pattern generated: ${p}`);
-});
-
-// Download log file
-$('downloadLog').addEventListener('click', ()=>{
-  const lines = Array.from($('logLines').children).map(n => n.textContent);
-  const blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'wingo_log.txt';
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-// clear history
-$('clearHistory').addEventListener('click', ()=>{
-  history = [];
-  renderHistory();
-  log('History cleared');
-});
-
-// Toggle seeded mode
-$('seededToggle').addEventListener('click', ()=>{
-  seeded = !seeded;
-  $('seededToggle').textContent = seeded ? 'Seeded: ON' : 'Seeded: OFF';
-  log(`Seeded mode set to ${seeded}`);
-});
-
-// small helpers
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-// pattern generator (simple mix of B/S sequences)
-function generatePattern(){
-  const now = Date.now();
-  const rng = mulberry32(now & 0xffffffff);
-  const len = 12;
-  let out = [];
-  for(let i=0;i<len;i++){
-    out.push((rng() > 0.5) ? 'B' : 'S');
-  }
-  return out.join('');
-}
-
-function renderHistory(){
-  const cont = $('historyList');
-  cont.innerHTML = '';
-  for(let i=0;i<history.length && i<50;i++){
-    const r = history[i];
-    const el = document.createElement('div');
-    el.className = 'hist-item';
-    el.innerHTML = `<div><strong>${r.color} ${r.number}</strong><div class="k">prob ${r.prob}% • acc ${r.accuracy}%</div></div><div class="k">${r.input}</div>`;
-    cont.appendChild(el);
-  }
-}
-
-// small TTS
-function speakPhrase(txt){
-  if(!('speechSynthesis' in window)) return;
-  const s = new SpeechSynthesisUtterance(txt);
-  s.lang = 'en-US';
-  s.rate = 1;
-  s.pitch = 1;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(s);
-}
-
-/* MATRIX CANVAS effect (inspired by the 999okwin scripts' matrix-block behavior) */
-(function matrixInit(){
-  const canvas = document.getElementById('matrixCanvas');
-  const ctx = canvas.getContext('2d');
-  let width, height;
-  function resize(){
-    width = canvas.width = canvas.clientWidth * devicePixelRatio;
-    height = canvas.height = canvas.clientHeight * devicePixelRatio;
-    ctx.font = `${12 * devicePixelRatio}px monospace`;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  const columns = Math.floor(width / (12 * devicePixelRatio));
-  const drops = new Array(columns).fill(0).map(()=>Math.floor(Math.random()*50));
-
-  function draw(){
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(0,0,width,height);
-    ctx.fillStyle = '#0fffa8';
-    for(let i=0;i<columns;i++){
-      const text = Math.random() > 0.85 ? ' ' : String(Math.floor(Math.random()*2));
-      ctx.fillText(text, i * (12 * devicePixelRatio), drops[i] * (12 * devicePixelRatio));
-      if(drops[i] * (12*devicePixelRatio) > height && Math.random() > 0.975){
-        drops[i] = 0;
-      }
-      drops[i]++;
-    }
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-
-log('Tool loaded — ready');
-
-/* initial UI state */
-$('seededToggle').textContent = seeded ? 'Seeded: ON' : 'Seeded: OFF';
-
-/* Preload sample example */
-$('periodInput').value = '123456';
-renderHistory();
+(function matrix(){const c=$("matrixCanvas"),ctx=c.getContext("2d");function resize(){c.width=c.clientWidth*devicePixelRatio;c.height=c.clientHeight*devicePixelRatio;ctx.font=`${12*devicePixelRatio}px monospace`;}window.onresize=resize;resize();let cols=Math.floor(c.width/(12*devicePixelRatio));let drops=new Array(cols).fill(0).map(()=>Math.random()*50);(function draw(){ctx.fillStyle="rgba(0,0,0,0.15)";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#0fffa8";for(let i=0;i<cols;i++){ctx.fillText(Math.random()>0.85?" ":String(Math.floor(Math.random()*2)),i*12*devicePixelRatio,drops[i]*12*devicePixelRatio);if(drops[i]*12*devicePixelRatio>c.height&&Math.random()>0.975)drops[i]=0;drops[i]++;}requestAnimationFrame(draw);})();})();
+log("Tool ready");
 </script>
 </body>
 </html>
